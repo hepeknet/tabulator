@@ -1,0 +1,9 @@
+version: '2'
+
+services:
+  elasticsearch:
+    image: "elasticsearch"
+  kibana:
+    image: "kibana"
+    links:
+      - "elasticsearch:elasticsearch"
