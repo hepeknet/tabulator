@@ -14,7 +14,7 @@ public class StorageLoader {
 	private static Logger LOG = LoggerFactory.getLogger(StorageLoader.class);
 
 	public static PojoSaver loadStorage() {
-		List<String> clusterNodes = Util.getStorageConfiguration();
+		final List<String> clusterNodes = Util.getStorageConfiguration();
 		LOG.debug("Loading storage for {}", clusterNodes);
 		return new ElasticSearchSaver(clusterNodes);
 	}

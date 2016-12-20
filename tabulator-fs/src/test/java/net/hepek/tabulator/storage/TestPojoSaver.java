@@ -36,4 +36,9 @@ public class TestPojoSaver implements PojoSaver {
 		return dsi;
 	}
 
+	@Override
+	public void close() {
+		
+	}
+
 }

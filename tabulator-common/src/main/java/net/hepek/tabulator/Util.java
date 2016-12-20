@@ -15,25 +15,25 @@ public abstract class Util {
 
 	private static final Logger logger = LoggerFactory.getLogger(Util.class);
 
-	private static final Config GLOBAL_CONFIG = getGlobalConfig();
+	private static Config GLOBAL_CONFIG;
 
 	public static Config getInternalConfig() {
-		Config conf = ConfigFactory.load();
+		final Config conf = ConfigFactory.load();
 		return conf;
 	}
 
 	public static List<String> getStorageConfiguration() {
-		return GLOBAL_CONFIG.getStringList("storage.clusterNodes");
+		return getGlobalConfig().getStringList("tabulator.storage.clusterNodes");
 	}
 
 	public static List<DataSourceConfiguration> getGloballyConfiguredDataSources() {
-		List<? extends ConfigObject> dss = GLOBAL_CONFIG.getObjectList("tabulator.data-sources");
-		List<DataSourceConfiguration> res = new LinkedList<DataSourceConfiguration>();
-		for (ConfigObject o : dss) {
-			Config cfg = o.toConfig();
-			DataSourceConfiguration dsc = new DataSourceConfiguration();
+		final List<? extends ConfigObject> dss = getGlobalConfig().getObjectList("tabulator.data-sources");
+		final List<DataSourceConfiguration> res = new LinkedList<DataSourceConfiguration>();
+		for (final ConfigObject o : dss) {
+			final Config cfg = o.toConfig();
+			final DataSourceConfiguration dsc = new DataSourceConfiguration();
 			dsc.setUri(cfg.getString("uri"));
-			int refreshTimeSec = cfg.getInt("refreshTimeSeconds");
+			final int refreshTimeSec = cfg.getInt("refreshTimeSeconds");
 			dsc.setRefreshTimeSeconds(refreshTimeSec);
 			res.add(dsc);
 		}
@@ -41,6 +41,9 @@ public abstract class Util {
 	}
 
 	private static Config getGlobalConfig() {
+		if(GLOBAL_CONFIG != null){
+			return GLOBAL_CONFIG;
+		}
 		logger.debug("Reading globally configured data sources...");
 		String configFilePath = System.getenv(Constants.CONFIG_FILE_PATH_PROP_NAME);
 		if (configFilePath == null || configFilePath.isEmpty()) {
@@ -51,18 +54,20 @@ public abstract class Util {
 					+ ". Did you configure tabulator properly?");
 		}
 		logger.debug("Will try to read configuration from {}", configFilePath);
-		return loadConfig(configFilePath);
+		GLOBAL_CONFIG = loadConfig(configFilePath);
+		logger.debug("Successfully loaded global config from {}", configFilePath);
+		return GLOBAL_CONFIG;
 	}
 
 	private static Config loadConfig(String configPath) {
 		if (Util.class.getClassLoader().getResourceAsStream(configPath) != null) {
 			return ConfigFactory.load(configPath);
 		}
-		File f = new File(configPath);
+		final File f = new File(configPath);
 		if (!f.exists() || !f.isFile()) {
 			throw new IllegalStateException(configPath + " is not a file!");
 		}
-		Config config = ConfigFactory.parseFile(f);
+		final Config config = ConfigFactory.parseFile(f);
 		return config;
 	}
 

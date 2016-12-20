@@ -8,9 +8,9 @@
   <artifactId>tabulator-common</artifactId>
   <dependencies>
   	<dependency>
-  		<groupId>${parent.groupId}</groupId>
+  		<groupId>${project.parent.groupId}</groupId>
   		<artifactId>tabulator-api</artifactId>
-  		<version>${parent.version}</version>
+  		<version>${project.parent.version}</version>
   	</dependency>
   </dependencies>
   

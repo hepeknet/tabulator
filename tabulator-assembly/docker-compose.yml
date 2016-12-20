@@ -1,0 +1,21 @@
+elasticsearch:
+  image: elasticsearch
+  ports:
+  - "9200:9200"
+kibana:
+  image : kibana
+  links:
+  - "elasticsearch:elasticsearch"
+  ports:
+  - "5601:5601"
+tabulator:
+  image: hepeknet/tabulator
+  links:
+  - "elasticsearch:elasticsearch"
+  environment:
+  - tabulator_conf=/opt/hepek/tabulator/conf/simple_docker_test.conf
+  volumes:
+  - ./src/test/resources/:/opt/hepek/tabulator/conf/
+  - ../tabulator-fs/src/test/resources/parquet/:/opt/hepek/data/
+
+# sysctl -w vm.max_map_count=262144

@@ -25,7 +25,11 @@ public class ElasticSearchSaver implements PojoSaver {
 	
 	private static final int DEFAULT_PORT = 9300;
 	
-	private org.elasticsearch.client.transport.TransportClient client;
+	private static final String SCHEMA_INDEX = "schema";
+	private static final String DS_INDEX = "datasource";
+	private static final String FILES_INDEX = "files";
+	
+	private final org.elasticsearch.client.transport.TransportClient client;
 	
 	private final ObjectMapper mapper = new ObjectMapper();
 	
@@ -33,53 +37,62 @@ public class ElasticSearchSaver implements PojoSaver {
 		if(clusterNodes == null || clusterNodes.isEmpty()){
 			throw new IllegalArgumentException("Cluster nodes must not be null or empty");
 		}
+		logger.debug("Cluster nodes are {}", clusterNodes);
 		client = new PreBuiltTransportClient(Settings.EMPTY);
-		for(String addr : clusterNodes){
-			int indexOfColon = addr.indexOf(':');
-			String host = "";
+		for(final String addr : clusterNodes){
+			logger.debug("Parsing {}", addr);
+			final int indexOfColon = addr.indexOf(':');
+			String host = addr;
 			int port = DEFAULT_PORT;
 			if(indexOfColon > 0){
 				host = addr.substring(0, indexOfColon);
-				port = Integer.parseInt(addr.substring(indexOfColon + 1));
+				logger.debug("Host is {}", host);
+				final String portStr = addr.substring(indexOfColon + 1);
+				logger.debug("Port is {}", portStr);
+				port = Integer.parseInt(portStr);
 			}
 			logger.debug("Adding ES host {}:{}", host, port);
 			try {
 				client.addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName(host), port));
-			} catch (UnknownHostException e) {
-				throw new IllegalStateException("Unable to parse address to ES - given string is [" + addr + "]");
+				logger.debug("Successfully created client to {}:{}", host, port);
+			} catch (final UnknownHostException e) {
+				throw new IllegalStateException("Unable to access ES host - given string is [" + addr + "]");
 			}
 		}
-		        
 	}
 	
+	@Override
 	public void save(SchemaInfo schemaInfo) {
 		try {
-			byte[] json = mapper.writeValueAsBytes(schemaInfo);
-			IndexResponse ir = client.prepareIndex().setSource(json).get();
-		} catch (JsonProcessingException e) {
+			final byte[] json = mapper.writeValueAsBytes(schemaInfo);
+			final IndexResponse ir = client.prepareIndex().setSource(json).setIndex(SCHEMA_INDEX).setId(schemaInfo.getId()).get();
+		} catch (final JsonProcessingException e) {
 			logger.warn("Was not able to save schema. The reason is ", e);
 		}
 		
 	}
 
+	@Override
 	public void save(FileWithSchema file) {
 		try {
-			byte[] json = mapper.writeValueAsBytes(file);
-			IndexResponse ir = client.prepareIndex().setSource(json).get();
-		} catch (JsonProcessingException e) {
+			final byte[] json = mapper.writeValueAsBytes(file);
+			final IndexResponse ir = client.prepareIndex().setSource(json).setIndex(FILES_INDEX).setId(file.getAbsolutePath()).get();
+		} catch (final JsonProcessingException e) {
 			logger.warn("Was not able to save schema. The reason is ", e);
 		}
 	}
 
+	@Override
 	public void save(DataSourceInfo ds) {
 		try {
-			byte[] json = mapper.writeValueAsBytes(ds);
-			IndexResponse ir = client.prepareIndex().setSource(json).get();
-		} catch (JsonProcessingException e) {
+			final byte[] json = mapper.writeValueAsBytes(ds);
+			final IndexResponse ir = client.prepareIndex().setSource(json).setIndex(DS_INDEX).setId(ds.getAccessURI()).get();
+		} catch (final JsonProcessingException e) {
 			logger.warn("Was not able to save schema. The reason is ", e);
 		}
 	}
 	
+	@Override
 	public void close(){
 		if(this.client != null){
 			logger.debug("Closing client connection...");

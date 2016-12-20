@@ -1,9 +1,10 @@
-version: '2'
-
-services:
-  elasticsearch:
-    image: "elasticsearch"
-  kibana:
-    image: "kibana"
-    links:
-      - "elasticsearch:elasticsearch"
+elasticsearch:
+  image: elasticsearch
+  ports:
+  - "9200:9200"
+kibana:
+  image : kibana
+  links:
+  - "elasticsearch:elasticsearch"
+  ports:
+  - "5601:5601"
