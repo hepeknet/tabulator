@@ -60,7 +60,7 @@ public class FSDataSourceProcessor implements DataSourceProcessor {
 		log.debug("Processing local fs {}", uri);
 		final DataSourceInfo dsi = new DataSourceInfo();
 		dsi.setAccessURI(uri);
-		dsi.setType(DataSourceType.FS);
+		dsi.setType(DataSourceType.LOCAL_FS);
 		final Path dir = Paths.get(uri);
 		if (!dir.toFile().isDirectory()) {
 			log.warn("{} is not directory. Will not process it.", uri);
@@ -297,7 +297,7 @@ public class FSDataSourceProcessor implements DataSourceProcessor {
 	}
 
 	private void processHDFS(String uri, Storage storage) throws Exception {
-		log.debug("Processing HDFS {}", uri);
+		log.debug("Processing {}", uri);
 		final DataSourceInfo dsi = new DataSourceInfo();
 		dsi.setAccessURI(uri);
 		dsi.setType(DataSourceType.HDFS);
@@ -320,7 +320,7 @@ public class FSDataSourceProcessor implements DataSourceProcessor {
 		dsi.setOldestItemCreationTime(oldestCreationTime);
 		dsi.setLastUpdateTime(lastUpdateTime);
 		storage.save(dsi);
-		log.debug("Successfully processed HDFS {}", uri);
+		log.debug("Successfully processed {}", uri);
 	}
 
 	private static boolean isLocalFs(String uri) {

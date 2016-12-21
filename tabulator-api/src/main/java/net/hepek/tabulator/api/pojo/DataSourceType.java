@@ -2,6 +2,6 @@ package net.hepek.tabulator.api.pojo;
 
 public enum DataSourceType {
 
-	FS, HDFS, JDBC
+	LOCAL_FS, HDFS, JDBC
 	
 }

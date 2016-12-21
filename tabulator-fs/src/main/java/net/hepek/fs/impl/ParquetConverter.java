@@ -16,6 +16,7 @@ import org.apache.parquet.schema.PrimitiveType.PrimitiveTypeName;
 import org.apache.parquet.schema.Type;
 import org.apache.parquet.schema.Type.Repetition;
 
+import net.hepek.tabulator.StringUtil;
 import net.hepek.tabulator.api.pojo.BooleanColumnInfo;
 import net.hepek.tabulator.api.pojo.ColumnInfo;
 import net.hepek.tabulator.api.pojo.GroupColumnInfo;
@@ -36,6 +37,8 @@ public class ParquetConverter {
 		// TODO add avro here etc
 		si.setType("parquet");
 		final MessageType schema = fmd.getSchema();
+		final String id = StringUtil.getMD5Hash(schema.toString());
+		si.setId(id);
 		final String name = schema.getName();
 		si.setName(name);
 		
