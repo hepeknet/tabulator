@@ -4,11 +4,13 @@ import net.hepek.tabulator.api.pojo.DataSourceInfo;
 import net.hepek.tabulator.api.pojo.FileWithSchema;
 import net.hepek.tabulator.api.pojo.SchemaInfo;
 
-public interface PojoSaver {
+public interface Storage {
 
 	void save(SchemaInfo schemaInfo);
 	void save(FileWithSchema file);
 	void save(DataSourceInfo ds);
 	void close();
+	long getLastModified(String path);
+	void saveLastModified(String path, long modificationTime);
 	
 }

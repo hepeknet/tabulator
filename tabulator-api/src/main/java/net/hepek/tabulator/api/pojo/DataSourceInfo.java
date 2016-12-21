@@ -94,7 +94,7 @@ public class DataSourceInfo {
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		DataSourceInfo other = (DataSourceInfo) obj;
+		final DataSourceInfo other = (DataSourceInfo) obj;
 		if (accessURI == null) {
 			if (other.accessURI != null)
 				return false;

@@ -11,12 +11,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import net.hepek.tabulator.api.ds.DataSourceProcessor;
-import net.hepek.tabulator.api.storage.PojoSaver;
+import net.hepek.tabulator.api.storage.Storage;
 import net.hepek.tabulator.storage.StorageLoader;
 
 public class Main {
 	
-	private static final int DEFAULT_INITIAL_DELAY_SECS = 5;
+	private static final int MAIN_THREAD_SLEEP_TIME = 30 * 1000;
+	
+	private static final int DEFAULT_INITIAL_DELAY_SECS = 10;
 
 	private static Logger LOG = LoggerFactory.getLogger(Main.class);
 
@@ -40,7 +42,7 @@ public class Main {
 			exec.scheduleWithFixedDelay(() -> {
 				try{
 				LOG.debug("Submitted {} for processing", uri);
-				final PojoSaver storage = loadStorage();	
+				final Storage storage = loadStorage();	
 				LOG.debug("Loaded storage {}", storage);
 				dsp.processDataSource(uri, storage);
 				LOG.debug("Processed {}", uri);
@@ -53,12 +55,12 @@ public class Main {
 			LOG.debug("Datasource {} is scheduled to be refreshed every {} seconds", uri, dsc.getRefreshTimeSeconds());
 		}
 		while(true){
-			Thread.sleep(5000);
+			Thread.sleep(MAIN_THREAD_SLEEP_TIME);
 			LOG.debug(".");
 		}
 	}
 
-	private static PojoSaver loadStorage() {
+	private static Storage loadStorage() {
 		LOG.debug("Loading storage...");
 		return StorageLoader.loadStorage();
 	}

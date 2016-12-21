@@ -26,24 +26,25 @@ import net.hepek.tabulator.api.pojo.StringColumnInfo;
 public class ParquetConverter {
 	
 	public SchemaInfo parseParquetFile(URI uri) throws IOException{
-		org.apache.hadoop.fs.Path path = new org.apache.hadoop.fs.Path(uri);
-		ParquetMetadata pmd = ParquetFileReader.readFooter(new Configuration(), path, ParquetMetadataConverter.NO_FILTER);
-		SchemaInfo si = new SchemaInfo();
+		final org.apache.hadoop.fs.Path path = new org.apache.hadoop.fs.Path(uri);
+		final ParquetMetadata pmd = ParquetFileReader.readFooter(new Configuration(), path, ParquetMetadataConverter.NO_FILTER);
+		final SchemaInfo si = new SchemaInfo();
 		
-		org.apache.parquet.hadoop.metadata.FileMetaData fmd = pmd.getFileMetaData();
-		String createdBy = fmd.getCreatedBy();
+		final org.apache.parquet.hadoop.metadata.FileMetaData fmd = pmd.getFileMetaData();
+		final String createdBy = fmd.getCreatedBy();
 		si.setCreatedBy(createdBy);
-		MessageType schema = fmd.getSchema();
-		String name = schema.getName();
+		// TODO add avro here etc
+		si.setType("parquet");
+		final MessageType schema = fmd.getSchema();
+		final String name = schema.getName();
 		si.setName(name);
 		
-		List<ColumnInfo> cols = new LinkedList<>();
-		for(Type field : schema.getFields()) {
-			ColumnInfo ci = convertField(field, null);
+		final List<ColumnInfo> cols = new LinkedList<>();
+		for(final Type field : schema.getFields()) {
+			final ColumnInfo ci = convertField(field, null);
 			cols.add(ci);
 		}
 		si.setColumns(cols);
-		
 		return si;
 	}
 	
@@ -54,7 +55,7 @@ public class ParquetConverter {
 			fullPath = parentFullPath + "." + field.getName();
 		}
 		if(field.isPrimitive()){
-			PrimitiveType pm = field.asPrimitiveType();
+			final PrimitiveType pm = field.asPrimitiveType();
 			if(PrimitiveTypeName.BOOLEAN == pm.getPrimitiveTypeName()) {
 				ci = new BooleanColumnInfo();
 			} else if(PrimitiveTypeName.BINARY == pm.getPrimitiveTypeName()){
@@ -65,10 +66,10 @@ public class ParquetConverter {
 			ci.setOptional(pm.getRepetition() == Repetition.OPTIONAL);
 		} else {
 			ci = new GroupColumnInfo();
-			GroupType gt = field.asGroupType();
-			List<ColumnInfo> children = new LinkedList<>();
-			for(Type t : gt.getFields()){
-				ColumnInfo c = convertField(t, fullPath);
+			final GroupType gt = field.asGroupType();
+			final List<ColumnInfo> children = new LinkedList<>();
+			for(final Type t : gt.getFields()){
+				final ColumnInfo c = convertField(t, fullPath);
 				children.add(c);
 			}
 			((GroupColumnInfo)ci).setChildren(children);

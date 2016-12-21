@@ -10,10 +10,11 @@ public class SchemaInfo {
 	private String id;
 	private String name;
 	private String createdBy;
+	private String type;
 	private Map<String, String> properties;
 	private Set<String> tags;
 	private List<ColumnInfo> columns;
-	private Set<DataSourceInfo> datasources = new HashSet<DataSourceInfo>();
+	private final Set<DataSourceInfo> datasources = new HashSet<DataSourceInfo>();
 
 	public String getId() {
 		return id;
@@ -69,6 +70,14 @@ public class SchemaInfo {
 
 	public void addDatasource(DataSourceInfo ds) {
 		this.datasources.add(ds);
+	}
+
+	public String getType() {
+		return type;
+	}
+
+	public void setType(String type) {
+		this.type = type;
 	}
 
 	@Override
