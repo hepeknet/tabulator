@@ -13,7 +13,8 @@ tabulator:
   links:
   - "elasticsearch:elasticsearch"
   environment:
-  - tabulator_conf=/opt/hepek/tabulator/conf/simple_docker_test.conf
+  - TABULATOR_CONF=/opt/hepek/tabulator/conf/simple_docker_test.conf
+  - TABULATOR_CLEAN_CACHE=false
   volumes:
   - ./src/test/resources/:/opt/hepek/tabulator/conf/
   - ../tabulator-fs/src/test/resources/parquet/:/opt/hepek/data/

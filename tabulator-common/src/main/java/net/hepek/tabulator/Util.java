@@ -1,8 +1,14 @@
 package net.hepek.tabulator;
 
 import java.io.File;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,6 +16,7 @@ import org.slf4j.LoggerFactory;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigObject;
+import com.typesafe.config.ConfigValue;
 
 public abstract class Util {
 
@@ -35,9 +42,42 @@ public abstract class Util {
 			dsc.setUri(cfg.getString("uri"));
 			final int refreshTimeSec = cfg.getInt("refreshTimeSeconds");
 			dsc.setRefreshTimeSeconds(refreshTimeSec);
+			if(cfg.hasPath("tags")){
+			final List<String> tags = cfg.getStringList("tags");
+			if(tags != null && !tags.isEmpty()){
+				final Set<String> uniqueTags = new HashSet<>(tags);
+				dsc.setTags(uniqueTags);
+				logger.debug("Assigned tags {} to ds", tags);
+			}
+			}
+			if(cfg.hasPath("properties")){
+				final List<ConfigObject> objs = (List<ConfigObject>) cfg.getObjectList("properties");
+				if(objs != null && !objs.isEmpty()){
+					final Map<String, String> properties = new HashMap<>();
+					for(final ConfigObject co : objs){
+						for (final Iterator<Entry<String, ConfigValue>> iterator = co.entrySet().iterator(); iterator
+								.hasNext();) {
+							final Entry<String, ConfigValue> entry = iterator.next();
+							final String key = entry.getKey();
+							final String value = entry.getValue().unwrapped().toString();
+							properties.put(key, value);
+						}
+					}
+					dsc.setProperties(properties);
+					logger.debug("Assigned properties {} to ds", properties);
+				}
+			}
 			res.add(dsc);
 		}
 		return res;
+	}
+	
+	public static boolean shouldCleanCache() {
+		final String cleanCacheEnvVal = System.getenv(Constants.CONFIG_CLEAN_CACHE);
+		if(cleanCacheEnvVal != null){
+			return cleanCacheEnvVal.toLowerCase().equals("true");
+		}
+		return false;
 	}
 
 	private static Config getGlobalConfig() {

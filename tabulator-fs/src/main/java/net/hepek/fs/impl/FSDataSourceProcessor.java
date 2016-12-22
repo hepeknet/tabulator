@@ -78,23 +78,24 @@ public class FSDataSourceProcessor implements DataSourceProcessor {
 		log.debug("Successfully processed {}", uri);
 	}
 
-	private FileProcessingOutput processLocalDirectory(Path dir, Storage storage, ParquetConverter converter,
+	private DirectoryProcessingOutput processLocalDirectory(Path dir, Storage storage, ParquetConverter converter,
 			DataSourceInfo dsi) throws IOException {
 		long totalSizeInBytes = 0;
 		long oldestCreationTime = 0;
 		long lastUpdateTime = 0;
-		final FileProcessingOutput res = new FileProcessingOutput();
+		final DirectoryProcessingOutput res = new DirectoryProcessingOutput();
 		final boolean shouldProcessDir = shouldProcessLocalDirectory(dir, storage);
 		if (!shouldProcessDir) {
 			log.debug("Directory {} was not modified since last check. Will not process it",
 					dir.toFile().getAbsolutePath());
 			return res;
 		}
-		try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir, "*.{parquet, pq}")) {
+		int totalFilesProcessed = 0;
+		try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir, "*.{parquet, pq, pqt}")) {
 			for (final Path entry : stream) {
 				final File f = entry.toFile();
 				if (f.isDirectory()) {
-					final FileProcessingOutput dirOut = processLocalDirectory(entry, storage, converter, dsi);
+					final DirectoryProcessingOutput dirOut = processLocalDirectory(entry, storage, converter, dsi);
 					if (oldestCreationTime < dirOut.timeCreated) {
 						oldestCreationTime = dirOut.timeCreated;
 					}
@@ -112,6 +113,7 @@ public class FSDataSourceProcessor implements DataSourceProcessor {
 							lastUpdateTime = out.timeUpdated;
 						}
 						totalSizeInBytes += out.sizeBytes;
+						totalFilesProcessed += 1;
 					} catch (final Exception exc) {
 						log.warn("Exception while parsing file {}", entry, exc);
 					}
@@ -123,26 +125,29 @@ public class FSDataSourceProcessor implements DataSourceProcessor {
 		res.sizeBytes = totalSizeInBytes;
 		res.timeCreated = oldestCreationTime;
 		res.timeUpdated = lastUpdateTime;
+		res.totalFilesProcessed = totalFilesProcessed;
+		log.debug("In total processed {} files in {}", totalFilesProcessed, dir.toString());
 		saveLastModificationTimeLocal(dir, storage);
 		return res;
 	}
 
-	private FileProcessingOutput processHDFSDirectory(FileStatus dir, Storage storage, ParquetConverter converter,
+	private DirectoryProcessingOutput processHDFSDirectory(FileStatus dir, Storage storage, ParquetConverter converter,
 			DataSourceInfo dsi, FileSystem hdfs) throws IOException {
 		long totalSizeInBytes = 0;
 		long oldestCreationTime = 0;
 		long lastUpdateTime = 0;
-		final FileProcessingOutput res = new FileProcessingOutput();
+		final DirectoryProcessingOutput res = new DirectoryProcessingOutput();
 		final boolean shouldProcessDir = shouldProcessHDFSDirectory(dir, storage);
 		if (!shouldProcessDir) {
 			final String dirName = getFullFileName(dir);
 			log.debug("Directory {} was not modified since last check. Will not process it", dirName);
 			return res;
 		}
+		int totalFilesProcessed = 0;
 		final FileStatus[] children = hdfs.listStatus(dir.getPath());
 		for (final FileStatus entry : children) {
 			if (entry.isDirectory()) {
-				final FileProcessingOutput dirOut = processHDFSDirectory(entry, storage, converter, dsi, hdfs);
+				final DirectoryProcessingOutput dirOut = processHDFSDirectory(entry, storage, converter, dsi, hdfs);
 				if (oldestCreationTime < dirOut.timeCreated) {
 					oldestCreationTime = dirOut.timeCreated;
 				}
@@ -160,6 +165,7 @@ public class FSDataSourceProcessor implements DataSourceProcessor {
 						lastUpdateTime = out.timeUpdated;
 					}
 					totalSizeInBytes += out.sizeBytes;
+					totalFilesProcessed += 1;
 				} catch (final Exception exc) {
 					log.warn("Exception while parsing file {}", entry, exc);
 				}
@@ -168,6 +174,8 @@ public class FSDataSourceProcessor implements DataSourceProcessor {
 		res.sizeBytes = totalSizeInBytes;
 		res.timeCreated = oldestCreationTime;
 		res.timeUpdated = lastUpdateTime;
+		res.totalFilesProcessed = totalFilesProcessed;
+		log.debug("In total processed {} files in {}", totalFilesProcessed, dir.getPath().toString());
 		saveLastModificationTimeHDFS(dir, storage);
 		return res;
 	}
@@ -188,35 +196,35 @@ public class FSDataSourceProcessor implements DataSourceProcessor {
 	}
 
 	private boolean shouldProcessLocalDirectory(Path dir, Storage storage) throws IOException {
-		final String dirPath = dir.toFile().getAbsolutePath();
-		log.debug("Checking if {} should be processed", dirPath);
+		final String dirPath = dir.getFileName().toString();
 		if (isHidden(dirPath)) {
 			log.debug("{} is hidden - will not process it", dirPath);
 			return false;
 		}
 		final BasicFileAttributes dirAttrs = Files.readAttributes(dir, BasicFileAttributes.class);
 		final long dirModificationTime = dirAttrs.lastModifiedTime().toMillis();
-		final long lastRememberedModificationTime = storage.getLastModified(dirPath);
+		final String fullDirPath = dir.toFile().getAbsolutePath();
+		final long lastRememberedModificationTime = storage.getLastModified(fullDirPath);
 		final boolean shouldProcess = lastRememberedModificationTime < dirModificationTime;
-		log.debug("Should process {} = {}", dirPath, shouldProcess);
+		log.debug("Should process {} = {}", fullDirPath, shouldProcess);
 		return shouldProcess;
 	}
 
 	private boolean isHidden(String name) {
-		return name.startsWith(".");
+		return name.startsWith(".") || name.startsWith("_temp");
 	}
 
 	private boolean shouldProcessHDFSDirectory(FileStatus dir, Storage storage) throws IOException {
-		final String dirPath = getFullFileName(dir);
-		log.debug("Checking if {} should be processed", dirPath);
+		final String dirPath = getDirectoryNameOnly(dir);
 		if (isHidden(dirPath)) {
 			log.debug("{} is hidden - will not process it", dirPath);
 			return false;
 		}
 		final long dirModificationTime = dir.getModificationTime();
-		final long lastRememberedModificationTime = storage.getLastModified(dirPath);
+		final String fullDirPath = getFullFileName(dir);
+		final long lastRememberedModificationTime = storage.getLastModified(fullDirPath);
 		final boolean shouldProcess = lastRememberedModificationTime < dirModificationTime;
-		log.debug("Should process {} = {}", dirPath, shouldProcess);
+		log.debug("Should process {} = {}", fullDirPath, shouldProcess);
 		return shouldProcess;
 	}
 
@@ -250,7 +258,7 @@ public class FSDataSourceProcessor implements DataSourceProcessor {
 			fws.setAbsolutePath(f.getAbsolutePath());
 			fws.setSchemaId(si.getId());
 			storage.save(fws);
-			log.debug("Successfully parsed {}", entry);
+			log.trace("Successfully parsed {}", entry);
 		}
 		return out;
 	}
@@ -281,9 +289,13 @@ public class FSDataSourceProcessor implements DataSourceProcessor {
 			fws.setAbsolutePath(getFullFileName(entry));
 			fws.setSchemaId(si.getId());
 			storage.save(fws);
-			log.debug("Successfully parsed {}", entry);
+			log.trace("Successfully parsed {}", entry);
 		}
 		return out;
+	}
+	
+	private String getDirectoryNameOnly(FileStatus entry){
+		return entry.getPath().getName();
 	}
 
 	private String getFullFileName(FileStatus entry) {
@@ -294,6 +306,10 @@ public class FSDataSourceProcessor implements DataSourceProcessor {
 		long timeCreated;
 		long timeUpdated;
 		long sizeBytes;
+	}
+	
+	class DirectoryProcessingOutput extends FileProcessingOutput {
+		int totalFilesProcessed;
 	}
 
 	private void processHDFS(String uri, Storage storage) throws Exception {

@@ -56,4 +56,10 @@ public class TestPojoSaver implements Storage {
 		
 	}
 
+	@Override
+	public void cleanCaches() {
+		// TODO Auto-generated method stub
+		
+	}
+
 }

@@ -12,5 +12,6 @@ public interface Storage {
 	void close();
 	long getLastModified(String path);
 	void saveLastModified(String path, long modificationTime);
+	void cleanCaches();
 	
 }

@@ -6,6 +6,7 @@ import java.util.List;
 
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.index.IndexResponse;
+import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.transport.client.PreBuiltTransportClient;
@@ -22,27 +23,33 @@ import net.hepek.tabulator.api.storage.Storage;
 
 public class ElasticSearchStorage implements Storage {
 
-	private final Logger logger = LoggerFactory.getLogger(getClass());
+	protected final Logger logger = LoggerFactory.getLogger(getClass());
 
 	private static final int DEFAULT_PORT = 9300;
 
-	private static final String SCHEMA_INDEX = "schema";
-	private static final String DS_INDEX = "datasource";
-	private static final String FILES_INDEX = "files";
+	protected static final String SCHEMA_INDEX = "schema";
+	protected static final String DS_INDEX = "datasource";
+	protected static final String FILES_INDEX = "files";
 
-	private static final String INTERNAL_MODIFICATION_INDEX = "tab_int_modifications";
-	private static final String INTERNAL_MODIFICATION_TYPE = "tab_int_modifications_type";
+	protected static final String INTERNAL_MODIFICATION_INDEX = "tab_int_modifications";
+	protected static final String INTERNAL_MODIFICATION_TYPE = "tab_int_modifications_type";
 
-	private final org.elasticsearch.client.transport.TransportClient client;
+	private final TransportClient client;
+	protected final List<String> clusterNodes;
 
-	private final ObjectMapper mapper = new ObjectMapper();
+	protected final ObjectMapper mapper = new ObjectMapper();
 
 	public ElasticSearchStorage(List<String> clusterNodes) {
 		if (clusterNodes == null || clusterNodes.isEmpty()) {
 			throw new IllegalArgumentException("Cluster nodes must not be null or empty");
 		}
 		logger.debug("Cluster nodes are {}", clusterNodes);
-		client = new PreBuiltTransportClient(Settings.EMPTY);
+		this.clusterNodes = clusterNodes;
+		client = createClient(clusterNodes);
+	}
+
+	protected TransportClient createClient(List<String> clusterNodes) {
+		final TransportClient _client = new PreBuiltTransportClient(Settings.EMPTY);
 		for (final String addr : clusterNodes) {
 			logger.debug("Parsing {}", addr);
 			final int indexOfColon = addr.indexOf(':');
@@ -57,12 +64,13 @@ public class ElasticSearchStorage implements Storage {
 			}
 			logger.debug("Adding ES host {}:{}", host, port);
 			try {
-				client.addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName(host), port));
+				_client.addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName(host), port));
 				logger.debug("Successfully created client to {}:{}", host, port);
 			} catch (final UnknownHostException e) {
 				throw new IllegalStateException("Unable to access ES host - given string is [" + addr + "]");
 			}
 		}
+		return _client;
 	}
 
 	@Override
@@ -148,6 +156,11 @@ public class ElasticSearchStorage implements Storage {
 		} catch (final JsonProcessingException e) {
 			logger.warn("Was not able to save schema. The reason is ", e);
 		}
+	}
+
+	@Override
+	public void cleanCaches() {
+		
 	}
 
 }

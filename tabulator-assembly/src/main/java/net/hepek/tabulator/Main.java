@@ -15,9 +15,9 @@ import net.hepek.tabulator.api.storage.Storage;
 import net.hepek.tabulator.storage.StorageLoader;
 
 public class Main {
-	
+
 	private static final int MAIN_THREAD_SLEEP_TIME = 30 * 1000;
-	
+
 	private static final int DEFAULT_INITIAL_DELAY_SECS = 10;
 
 	private static Logger LOG = LoggerFactory.getLogger(Main.class);
@@ -34,27 +34,34 @@ public class Main {
 		if (processorLoader == null) {
 			throw new IllegalStateException("Was not able to find any data processors...");
 		}
+		final boolean shouldCleanCache = Util.shouldCleanCache();
+		LOG.debug("Should clean cache {}", shouldCleanCache);
+		if(shouldCleanCache){
+			final Storage storage = loadStorage();
+			storage.close();
+			LOG.debug("Cleaned cache");
+		}
 		for (final DataSourceConfiguration dsc : configuredDataSources) {
 			final ScheduledExecutorService exec = Executors.newScheduledThreadPool(1);
 			final String uri = dsc.getUri();
 			final DataSourceProcessor dsp = findAppropriateProcessor(uri);
-			
+
 			exec.scheduleWithFixedDelay(() -> {
-				try{
-				LOG.debug("Submitted {} for processing", uri);
-				final Storage storage = loadStorage();	
-				LOG.debug("Loaded storage {}", storage);
-				dsp.processDataSource(uri, storage);
-				LOG.debug("Processed {}", uri);
-				storage.close();
-				}catch(final Throwable t){
+				try {
+					LOG.debug("Submitted {} for processing", uri);
+					final Storage storage = loadStorage();
+					LOG.debug("Loaded storage {}", storage);
+					dsp.processDataSource(uri, storage);
+					LOG.debug("Processed {}", uri);
+					storage.close();
+				} catch (final Throwable t) {
 					LOG.error("Error while processing {}", uri, t);
 				}
 			}, DEFAULT_INITIAL_DELAY_SECS, dsc.getRefreshTimeSeconds(), TimeUnit.SECONDS);
-			
+
 			LOG.debug("Datasource {} is scheduled to be refreshed every {} seconds", uri, dsc.getRefreshTimeSeconds());
 		}
-		while(true){
+		while (true) {
 			Thread.sleep(MAIN_THREAD_SLEEP_TIME);
 			LOG.debug(".");
 		}
