@@ -132,7 +132,7 @@ public class ElasticSearchStorage implements Storage {
 				logger.debug("Was not able to find last modification time for {}", path);
 			}
 		} catch (final Exception exc) {
-			logger.warn("Exception while trying to get last modifiaction time for {}", path, exc);
+			logger.warn("Exception while trying to get last modification time for {}", path, exc);
 		}
 		return 0;
 	}
@@ -143,7 +143,7 @@ public class ElasticSearchStorage implements Storage {
 			throw new IllegalArgumentException("Path must not be null or empty!");
 		}
 		if (modificationTime < 0) {
-			throw new IllegalArgumentException("Modifiation time must not be < 0");
+			throw new IllegalArgumentException("Modification time must not be < 0");
 		}
 		final InternalModificationTime imt = new InternalModificationTime();
 		imt.setLastModificationTime(modificationTime);

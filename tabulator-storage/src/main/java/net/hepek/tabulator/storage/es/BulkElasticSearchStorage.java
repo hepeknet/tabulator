@@ -11,6 +11,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexResponse;
 import org.elasticsearch.action.bulk.BulkRequestBuilder;
 import org.elasticsearch.action.bulk.BulkResponse;
@@ -164,7 +165,16 @@ public class BulkElasticSearchStorage extends ElasticSearchStorage {
 	private void deleteModificationsCache() {
 		final TransportClient cl = createClient(this.clusterNodes);
 		final DeleteIndexResponse dir = cl.admin().indices().prepareDelete(INTERNAL_MODIFICATION_INDEX).get();
+		final boolean deleteAck = dir.isAcknowledged();
+		final CreateIndexResponse createIndexResponse = cl.admin().indices().prepareCreate(INTERNAL_MODIFICATION_INDEX).get();
+		final boolean createAck = createIndexResponse.isAcknowledged();
 		cl.close();
+		if(!deleteAck){
+			throw new IllegalStateException("Did not get ACK for deleting caches...");
+		}
+		if(!createAck){
+			throw new IllegalStateException("Did not get ACK for creating caches...");
+		}
 	}
 
 	static class PostponedWorkItem implements Delayed {

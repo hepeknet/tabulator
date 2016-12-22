@@ -1,22 +1,30 @@
-elasticsearch:
-  image: elasticsearch
-  ports:
-  - "9200:9200"
-kibana:
-  image : kibana
-  links:
-  - "elasticsearch:elasticsearch"
-  ports:
-  - "5601:5601"
-tabulator:
-  image: hepeknet/tabulator
-  links:
-  - "elasticsearch:elasticsearch"
-  environment:
-  - TABULATOR_CONF=/opt/hepek/tabulator/conf/simple_docker_test.conf
-  - TABULATOR_CLEAN_CACHE=false
-  volumes:
-  - ./src/test/resources/:/opt/hepek/tabulator/conf/
-  - ../tabulator-fs/src/test/resources/parquet/:/opt/hepek/data/
+version: '2'
+
+services:
+
+    elasticsearch:
+        image: elasticsearch
+        ports:
+        - "9200:9200"
+    kibana:
+        image : kibana
+        links:
+        - "elasticsearch:elasticsearch"
+        ports:
+        - "5601:5601"
+        depends_on:
+        - elasticsearch
+    tabulator:
+        image: hepeknet/tabulator
+        links:
+        - "elasticsearch:elasticsearch"
+        environment:
+        - TABULATOR_CONF=/opt/hepek/tabulator/conf/simple_docker_test.conf
+        - TABULATOR_CLEAN_CACHE=true
+        volumes:
+        - ./src/test/resources/:/opt/hepek/tabulator/conf/
+        - ../tabulator-fs/src/test/resources/parquet/:/opt/hepek/data/
+        depends_on:
+        - elasticsearch
 
 # sysctl -w vm.max_map_count=262144
