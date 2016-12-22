@@ -175,6 +175,7 @@ public class BulkElasticSearchStorage extends ElasticSearchStorage {
 		if(!createAck){
 			throw new IllegalStateException("Did not get ACK for creating caches...");
 		}
+		logger.debug("Successfully recreated temporary indexes");
 	}
 
 	static class PostponedWorkItem implements Delayed {

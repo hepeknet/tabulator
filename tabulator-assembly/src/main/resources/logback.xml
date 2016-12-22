@@ -37,4 +37,9 @@
 		<appender-ref ref="STDOUT" />
 	</logger>
 
+	<logger name="org.apache.parquet.CorruptStatistics" level="error">
+		<appender-ref ref="ROLLING" />
+		<appender-ref ref="STDOUT" />
+	</logger>
+
 </configuration>
