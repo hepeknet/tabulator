@@ -5,6 +5,7 @@ net/hepek/tabulator/api/pojo/FileType.class
 net/hepek/tabulator/api/pojo/StringColumnInfo.class
 net/hepek/tabulator/api/ds/DataSourceProcessor.class
 net/hepek/tabulator/api/pojo/DataSourceType.class
+net/hepek/tabulator/api/pojo/DirectoryInfo.class
 net/hepek/tabulator/api/pojo/ColumnInfo.class
 net/hepek/tabulator/api/pojo/GroupColumnInfo.class
 net/hepek/tabulator/api/pojo/FileWithSchema.class

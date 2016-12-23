@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import net.hepek.tabulator.api.ds.DataSourceProcessor;
 import net.hepek.tabulator.api.pojo.DataSourceInfo;
 import net.hepek.tabulator.api.pojo.DataSourceType;
+import net.hepek.tabulator.api.pojo.DirectoryInfo;
 import net.hepek.tabulator.api.pojo.FileType;
 import net.hepek.tabulator.api.pojo.FileWithSchema;
 import net.hepek.tabulator.api.pojo.SchemaInfo;
@@ -95,7 +96,9 @@ public class FSDataSourceProcessor implements DataSourceProcessor {
 			log.debug("Directory {} was not modified since last check. Will not process it", dir.getFullPath());
 			return res;
 		}
-		int totalFilesProcessed = 0;
+		int totalFilesProcessedDirectlyInsideDir = 0;
+		int totalFilesProcessedUnderDirectory = 0;
+		long totalFilesSizeBytesUnderDir = 0;
 		final FileWrapper[] children = dir.listChildren();
 		if (children != null && children.length > 0) {
 			for (final FileWrapper fw : children) {
@@ -107,7 +110,8 @@ public class FSDataSourceProcessor implements DataSourceProcessor {
 					if (dirOut.timeUpdated > lastUpdateTime) {
 						lastUpdateTime = dirOut.timeUpdated;
 					}
-					totalSizeInBytes += dirOut.sizeBytes;
+					totalFilesSizeBytesUnderDir += dirOut.sizeBytes;
+					totalFilesProcessedUnderDirectory += dirOut.countProcessedFilesInsideDirectory;
 				} else {
 					try {
 						final FileProcessingOutput out = processFile(converter, fw, storage, dsi);
@@ -118,7 +122,7 @@ public class FSDataSourceProcessor implements DataSourceProcessor {
 							lastUpdateTime = out.timeUpdated;
 						}
 						totalSizeInBytes += out.sizeBytes;
-						totalFilesProcessed += 1;
+						totalFilesProcessedDirectlyInsideDir += 1;
 					} catch (final Exception exc) {
 						log.warn("Exception while parsing file {}", fw.getFullPath(), exc);
 					}
@@ -128,8 +132,20 @@ public class FSDataSourceProcessor implements DataSourceProcessor {
 		res.sizeBytes = totalSizeInBytes;
 		res.timeCreated = oldestCreationTime;
 		res.timeUpdated = lastUpdateTime;
-		res.totalFilesProcessed = totalFilesProcessed;
-		log.debug("In total processed {} files in {}", totalFilesProcessed, dir.getFullPath());
+		res.countProcessedFilesInsideDirectory = totalFilesProcessedDirectlyInsideDir;
+		res.countProcessedFilesUnderDirectory = totalFilesProcessedUnderDirectory + totalFilesProcessedDirectlyInsideDir;
+		res.summedTotalSizeOfFilesBytesUnderDirectory = totalFilesSizeBytesUnderDir + totalSizeInBytes;
+		log.debug("In total processed {} files in {}", totalFilesProcessedDirectlyInsideDir, dir.getFullPath());
+		if(res.countProcessedFilesInsideDirectory > 0){
+			final DirectoryInfo di = new DirectoryInfo();
+			di.setAbsolutePath(dir.getFullPath());
+			di.setCountProcessedFilesInsideDirectory(res.countProcessedFilesInsideDirectory);
+			di.setCountProcessedFilesUnderDirectory(res.countProcessedFilesUnderDirectory);
+			di.setSizeBytes(res.sizeBytes);
+			di.setSummedTotalSizeOfFilesBytesUnderDirectory(res.summedTotalSizeOfFilesBytesUnderDirectory);
+			di.setTimeCreated(res.timeCreated);
+			storage.save(di);
+		}
 		saveLastModificationTime(dir, storage);
 		return res;
 	}
@@ -190,11 +206,13 @@ public class FSDataSourceProcessor implements DataSourceProcessor {
 	class FileProcessingOutput {
 		long timeCreated;
 		long timeUpdated;
-		long sizeBytes;
+		long sizeBytes; // size of file or (for dirs) size of all files inside dir
 	}
 
 	class DirectoryProcessingOutput extends FileProcessingOutput {
-		int totalFilesProcessed;
+		int countProcessedFilesInsideDirectory;
+		long summedTotalSizeOfFilesBytesUnderDirectory;
+		int countProcessedFilesUnderDirectory;
 	}
 
 	private static boolean isLocalFs(String uri) {

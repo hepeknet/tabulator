@@ -13,11 +13,13 @@ import java.util.concurrent.TimeUnit;
 
 import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexResponse;
+import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
 import org.elasticsearch.action.bulk.BulkRequestBuilder;
 import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.client.transport.TransportClient;
 
 import net.hepek.tabulator.api.pojo.DataSourceInfo;
+import net.hepek.tabulator.api.pojo.DirectoryInfo;
 import net.hepek.tabulator.api.pojo.FileWithSchema;
 import net.hepek.tabulator.api.pojo.SchemaInfo;
 
@@ -52,6 +54,7 @@ public class BulkElasticSearchStorage extends ElasticSearchStorage {
 					int totalFiles = 0;
 					int totalDataSources = 0;
 					int totalIMT = 0;
+					int totalDirInfo = 0;
 					int totalSchemasSkipped = 0;
 					final Set<String> savedSchemaIdentifiers = new HashSet<>();
 					for (final PostponedWorkItem pwi : expired) {
@@ -84,14 +87,19 @@ public class BulkElasticSearchStorage extends ElasticSearchStorage {
 									.add(bulkClient.prepareIndex().setSource(json).setIndex(INTERNAL_MODIFICATION_INDEX)
 											.setType(INTERNAL_MODIFICATION_TYPE).setId(imt.getUri()));
 							totalIMT += 1;
+						} else if (item instanceof DirectoryInfo) {
+							final DirectoryInfo di = (DirectoryInfo) item;
+							bulkRequest.add(bulkClient.prepareIndex().setSource(json).setIndex(DIR_INFO_INDEX)
+									.setType(DIR_INFO_TYPE).setId(di.getAbsolutePath()));
+							totalDirInfo += 1;
 						} else {
 							logger.warn("Unknown instance type {}", item);
 						}
 					}
 					final BulkResponse bulkResponse = bulkRequest.get();
 					logger.debug(
-							"Excuted bulk save with {} schemas, {} files, {} datasources and {} IMT. Skipped saving of {} schemas",
-							totalSchemas, totalFiles, totalDataSources, totalIMT, totalSchemasSkipped);
+							"Excuted bulk save with {} schemas, {} files, {} datasources, {} directories and {} IMT. Skipped saving of {} schemas",
+							totalSchemas, totalFiles, totalDataSources, totalDirInfo, totalIMT, totalSchemasSkipped);
 					if (bulkResponse.hasFailures()) {
 						logger.warn("There are errors while bulk saving items. {}", bulkResponse.buildFailureMessage());
 					} else {
@@ -138,6 +146,11 @@ public class BulkElasticSearchStorage extends ElasticSearchStorage {
 	}
 
 	@Override
+	public void save(DirectoryInfo di) {
+		queue.add(new PostponedWorkItem(di, DEFAULT_DELAY_MILLIS));
+	}
+
+	@Override
 	public void close() {
 		super.close();
 	}
@@ -161,22 +174,36 @@ public class BulkElasticSearchStorage extends ElasticSearchStorage {
 		ALREADY_SAVED_SCHEMAS.clear();
 		deleteModificationsCache();
 	}
-	
+
 	private void deleteModificationsCache() {
 		final TransportClient cl = createClient(this.clusterNodes);
-		final DeleteIndexResponse dir = cl.admin().indices().prepareDelete(INTERNAL_MODIFICATION_INDEX).get();
-		final boolean deleteAck = dir.isAcknowledged();
-		final CreateIndexResponse createIndexResponse = cl.admin().indices().prepareCreate(INTERNAL_MODIFICATION_INDEX).get();
-		final boolean createAck = createIndexResponse.isAcknowledged();
-		cl.admin().indices().prepareClearCache(INTERNAL_MODIFICATION_INDEX).get();
-		cl.admin().indices().prepareRefresh(INTERNAL_MODIFICATION_INDEX).get();
+		try {
+			final IndicesExistsResponse indicesExistsResponse = cl.admin().indices()
+					.prepareExists(INTERNAL_MODIFICATION_INDEX).get();
+			final boolean indexExists = indicesExistsResponse.isExists();
+			if (indexExists) {
+				final DeleteIndexResponse dir = cl.admin().indices().prepareDelete(INTERNAL_MODIFICATION_INDEX).get();
+				final boolean deleteAck = dir.isAcknowledged();
+				if (!deleteAck) {
+					throw new IllegalStateException("Did not get ACK for deleting caches...");
+				}
+			} else {
+				logger.debug("Index {} does not exist - nothing to delete here...");
+			}
+		} catch (final Exception exc) {
+			logger.warn("Exception while deleting index: {}", exc.getMessage());
+		}
+		try {
+			final CreateIndexResponse createIndexResponse = cl.admin().indices()
+					.prepareCreate(INTERNAL_MODIFICATION_INDEX).get();
+			final boolean createAck = createIndexResponse.isAcknowledged();
+			if (!createAck) {
+				throw new IllegalStateException("Did not get ACK for creating caches...");
+			}
+		} catch (final Exception exc) {
+			logger.warn("Exception while creating index: {}", exc.getMessage());
+		}
 		cl.close();
-		if(!deleteAck){
-			throw new IllegalStateException("Did not get ACK for deleting caches...");
-		}
-		if(!createAck){
-			throw new IllegalStateException("Did not get ACK for creating caches...");
-		}
 		logger.debug("Successfully recreated temporary indexes");
 	}
 

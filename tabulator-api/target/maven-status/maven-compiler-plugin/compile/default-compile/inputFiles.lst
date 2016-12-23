@@ -8,6 +8,7 @@
 /home/borisa/git-p/tabulator/tabulator-api/src/main/java/net/hepek/tabulator/api/pojo/SchemaInfo.java
 /home/borisa/git-p/tabulator/tabulator-api/src/main/java/net/hepek/tabulator/api/storage/Storage.java
 /home/borisa/git-p/tabulator/tabulator-api/src/main/java/net/hepek/tabulator/api/pojo/StringColumnInfo.java
+/home/borisa/git-p/tabulator/tabulator-api/src/main/java/net/hepek/tabulator/api/pojo/DirectoryInfo.java
 /home/borisa/git-p/tabulator/tabulator-api/src/main/java/net/hepek/tabulator/api/pojo/GroupColumnInfo.java
 /home/borisa/git-p/tabulator/tabulator-api/src/main/java/net/hepek/tabulator/api/pojo/ColumnInfo.java
 /home/borisa/git-p/tabulator/tabulator-api/src/main/java/net/hepek/tabulator/api/pojo/ColumnType.java

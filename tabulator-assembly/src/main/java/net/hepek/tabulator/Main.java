@@ -37,7 +37,9 @@ public class Main {
 		final boolean shouldCleanCache = Util.shouldCleanCache();
 		LOG.debug("Should clean cache {}", shouldCleanCache);
 		if(shouldCleanCache){
+			Thread.sleep(DEFAULT_INITIAL_DELAY_SECS * 1000);
 			final Storage storage = loadStorage();
+			storage.cleanCaches();
 			storage.close();
 			LOG.debug("Cleaned cache");
 		}
