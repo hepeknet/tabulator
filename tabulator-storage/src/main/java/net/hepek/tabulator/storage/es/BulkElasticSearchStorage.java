@@ -168,6 +168,8 @@ public class BulkElasticSearchStorage extends ElasticSearchStorage {
 		final boolean deleteAck = dir.isAcknowledged();
 		final CreateIndexResponse createIndexResponse = cl.admin().indices().prepareCreate(INTERNAL_MODIFICATION_INDEX).get();
 		final boolean createAck = createIndexResponse.isAcknowledged();
+		cl.admin().indices().prepareClearCache(INTERNAL_MODIFICATION_INDEX).get();
+		cl.admin().indices().prepareRefresh(INTERNAL_MODIFICATION_INDEX).get();
 		cl.close();
 		if(!deleteAck){
 			throw new IllegalStateException("Did not get ACK for deleting caches...");
