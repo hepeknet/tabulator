@@ -4,6 +4,7 @@
 /home/borisa/git-p/tabulator/tabulator-api/src/main/java/net/hepek/tabulator/api/pojo/FileWithSchema.java
 /home/borisa/git-p/tabulator/tabulator-api/src/main/java/net/hepek/tabulator/api/pojo/DataSourceInfo.java
 /home/borisa/git-p/tabulator/tabulator-api/src/main/java/net/hepek/tabulator/api/pojo/NumericalColumnInfo.java
+/home/borisa/git-p/tabulator/tabulator-api/src/main/java/net/hepek/tabulator/api/ds/DataSource.java
 /home/borisa/git-p/tabulator/tabulator-api/src/main/java/net/hepek/tabulator/api/pojo/FileType.java
 /home/borisa/git-p/tabulator/tabulator-api/src/main/java/net/hepek/tabulator/api/pojo/SchemaInfo.java
 /home/borisa/git-p/tabulator/tabulator-api/src/main/java/net/hepek/tabulator/api/storage/Storage.java

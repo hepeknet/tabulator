@@ -15,6 +15,8 @@ import org.apache.parquet.schema.PrimitiveType;
 import org.apache.parquet.schema.PrimitiveType.PrimitiveTypeName;
 import org.apache.parquet.schema.Type;
 import org.apache.parquet.schema.Type.Repetition;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import net.hepek.tabulator.StringUtil;
 import net.hepek.tabulator.api.pojo.BooleanColumnInfo;
@@ -25,6 +27,8 @@ import net.hepek.tabulator.api.pojo.SchemaInfo;
 import net.hepek.tabulator.api.pojo.StringColumnInfo;
 
 public class ParquetConverter {
+	
+	private final Logger log = LoggerFactory.getLogger(getClass());
 
 	public SchemaInfo parseParquetFile(URI uri) throws IOException {
 		final org.apache.hadoop.fs.Path path = new org.apache.hadoop.fs.Path(uri);

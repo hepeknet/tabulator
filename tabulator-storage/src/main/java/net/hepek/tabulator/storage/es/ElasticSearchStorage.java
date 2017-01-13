@@ -34,8 +34,8 @@ public class ElasticSearchStorage implements Storage {
 	protected static final String DIR_INFO_INDEX = "directories";
 	protected static final String DIR_INFO_TYPE = "default";
 
-	protected static final String INTERNAL_MODIFICATION_INDEX = "tab_int_modifications";
-	protected static final String INTERNAL_MODIFICATION_TYPE = "tab_int_modifications_type";
+	protected static final String INTERNAL_MODIFICATION_INDEX = "tab_internal_modifications";
+	protected static final String INTERNAL_MODIFICATION_TYPE = "tab_internal_modifications_type";
 
 	private final TransportClient client;
 	protected final List<String> clusterNodes;

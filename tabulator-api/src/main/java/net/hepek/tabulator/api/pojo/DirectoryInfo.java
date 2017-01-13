@@ -8,6 +8,10 @@ public class DirectoryInfo {
 	private int countProcessedFilesInsideDirectory;
 	private long summedTotalSizeOfFilesBytesUnderDirectory;
 	private int countProcessedFilesUnderDirectory;
+	private int countUnprocessedFilesUnderDirectory;
+	private int countUnprocessedFilesInsideDirectory;
+	private int numberOfDifferentSchemasInsideDirectory;
+	private int numberOfDifferentSchemasUnderDirectory;
 
 	public String getAbsolutePath() {
 		return absolutePath;
@@ -55,6 +59,38 @@ public class DirectoryInfo {
 
 	public void setCountProcessedFilesUnderDirectory(int countProcessedFilesUnderDirectory) {
 		this.countProcessedFilesUnderDirectory = countProcessedFilesUnderDirectory;
+	}
+
+	public int getCountUnprocessedFilesUnderDirectory() {
+		return countUnprocessedFilesUnderDirectory;
+	}
+
+	public void setCountUnprocessedFilesUnderDirectory(int countUnprocessedFilesUnderDirectory) {
+		this.countUnprocessedFilesUnderDirectory = countUnprocessedFilesUnderDirectory;
+	}
+
+	public int getCountUnprocessedFilesInsideDirectory() {
+		return countUnprocessedFilesInsideDirectory;
+	}
+
+	public void setCountUnprocessedFilesInsideDirectory(int countUnprocessedFilesInsideDirectory) {
+		this.countUnprocessedFilesInsideDirectory = countUnprocessedFilesInsideDirectory;
+	}
+
+	public int getNumberOfDifferentSchemasInsideDirectory() {
+		return numberOfDifferentSchemasInsideDirectory;
+	}
+
+	public void setNumberOfDifferentSchemasInsideDirectory(int numberOfDifferentSchemasInsideDirectory) {
+		this.numberOfDifferentSchemasInsideDirectory = numberOfDifferentSchemasInsideDirectory;
+	}
+
+	public int getNumberOfDifferentSchemasUnderDirectory() {
+		return numberOfDifferentSchemasUnderDirectory;
+	}
+
+	public void setNumberOfDifferentSchemasUnderDirectory(int numberOfDifferentSchemasUnderDirectory) {
+		this.numberOfDifferentSchemasUnderDirectory = numberOfDifferentSchemasUnderDirectory;
 	}
 
 }

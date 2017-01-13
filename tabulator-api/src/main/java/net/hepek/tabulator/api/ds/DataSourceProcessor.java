@@ -4,8 +4,8 @@ import net.hepek.tabulator.api.storage.Storage;
 
 public interface DataSourceProcessor {
 
-	boolean understandsDataSourceUri(String uri);
+	boolean understandsDataSourceUri(DataSource ds);
 	
-	void processDataSource(String uri, Storage saver);
+	void processDataSource(DataSource ds, Storage saver);
 	
 }

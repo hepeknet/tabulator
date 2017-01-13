@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -12,6 +14,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import net.hepek.tabulator.api.ds.DataSource;
 import net.hepek.tabulator.api.ds.DataSourceProcessor;
 import net.hepek.tabulator.api.pojo.DataSourceInfo;
 import net.hepek.tabulator.api.pojo.DataSourceType;
@@ -28,45 +31,49 @@ public class FSDataSourceProcessor implements DataSourceProcessor {
 	private final Logger log = LoggerFactory.getLogger(getClass());
 
 	@Override
-	public boolean understandsDataSourceUri(String uri) {
-		if (uri != null) {
-			return uri.startsWith(FILE_PREFIX) || uri.startsWith(HDFS_PREFIX) || uri.startsWith("/");
+	public boolean understandsDataSourceUri(DataSource ds) {
+		if (ds != null && ds.getUri() != null) {
+			return ds.getUri().startsWith(FILE_PREFIX) || ds.getUri().startsWith(HDFS_PREFIX)
+					|| ds.getUri().startsWith("/");
 		}
 		return false;
 	}
 
 	@Override
-	public void processDataSource(String uri, Storage saver) {
+	public void processDataSource(DataSource ds, Storage saver) {
+		if (ds == null) {
+			throw new IllegalArgumentException("DataSource must not be null");
+		}
 		if (saver == null) {
 			throw new IllegalArgumentException("Saver must not be null");
 		}
-		log.debug("Processing data source {}", uri);
+		log.debug("Processing data source {}", ds);
 		try {
-			processDS(uri, saver);
+			processDS(ds, saver);
 		} catch (final Exception ie) {
-			log.error("Exception while processing {}", uri, ie);
+			log.error("Exception while processing {}", ds, ie);
 		}
 	}
 
-	private void processDS(String uri, Storage storage) throws Exception {
-		log.debug("Processing {}", uri);
+	private void processDS(DataSource ds, Storage storage) throws Exception {
+		log.debug("Processing {}", ds);
 		final DataSourceInfo dsi = new DataSourceInfo();
-		dsi.setAccessURI(uri);
+		dsi.setAccessURI(ds.getUri());
 		FileWrapper root = null;
 		FileSystem hdfs = null;
-		if (isLocalFs(uri)) {
+		if (isLocalFs(ds.getUri())) {
 			dsi.setType(DataSourceType.LOCAL_FS);
-			final Path dir = Paths.get(uri);
+			final Path dir = Paths.get(ds.getUri());
 			root = new FileWrapper(dir);
 		} else {
 			dsi.setType(DataSourceType.HDFS);
 			hdfs = new DistributedFileSystem();
-			hdfs.initialize(new URI(uri), new Configuration());
-			final org.apache.hadoop.fs.Path fR = new org.apache.hadoop.fs.Path(uri);
+			hdfs.initialize(new URI(ds.getUri()), new Configuration());
+			final org.apache.hadoop.fs.Path fR = new org.apache.hadoop.fs.Path(ds.getUri());
 			final FileStatus dirFS = hdfs.getFileStatus(fR);
 			root = new FileWrapper(dirFS, hdfs);
 		}
-		if(!root.isDirectory()){
+		if (!root.isDirectory()) {
 			log.warn("{} is not directory - nothing to process here", root.getFullPath());
 			return;
 		}
@@ -78,8 +85,10 @@ public class FSDataSourceProcessor implements DataSourceProcessor {
 		dsi.setSizeInBytes(totalSizeInBytes);
 		dsi.setOldestItemCreationTime(oldestCreationTime);
 		dsi.setLastUpdateTime(lastUpdateTime);
+		dsi.setTags(ds.getTags());
+		dsi.setProperties(ds.getProperties());
 		storage.save(dsi);
-		log.debug("Successfully processed {}", uri);
+		log.debug("Successfully processed {}", ds);
 		if (hdfs != null) {
 			hdfs.close();
 		}
@@ -98,8 +107,12 @@ public class FSDataSourceProcessor implements DataSourceProcessor {
 		}
 		int totalFilesProcessedDirectlyInsideDir = 0;
 		int totalFilesProcessedUnderDirectory = 0;
+		int totalFilesUnprocessedInsideDir = 0;
+		int totalFilesUnprocessedUnderDirectory = 0;
 		long totalFilesSizeBytesUnderDir = 0;
 		final FileWrapper[] children = dir.listChildren();
+		final Set<String> schemasInsideDir = new HashSet<>();
+		int totalSchemasUnderDir = 0;
 		if (children != null && children.length > 0) {
 			for (final FileWrapper fw : children) {
 				if (fw.isDirectory()) {
@@ -112,17 +125,24 @@ public class FSDataSourceProcessor implements DataSourceProcessor {
 					}
 					totalFilesSizeBytesUnderDir += dirOut.sizeBytes;
 					totalFilesProcessedUnderDirectory += dirOut.countProcessedFilesInsideDirectory;
+					totalFilesUnprocessedUnderDirectory += dirOut.countUnprocessedFilesInsideDirectory;
+					totalSchemasUnderDir += dirOut.numberOfDifferentSchemasInsideDirectory;
 				} else {
 					try {
 						final FileProcessingOutput out = processFile(converter, fw, storage, dsi);
-						if (oldestCreationTime < out.timeCreated) {
-							oldestCreationTime = out.timeCreated;
+						if (out == null) {
+							totalFilesUnprocessedInsideDir += 1;
+						} else {
+							if (oldestCreationTime < out.timeCreated) {
+								oldestCreationTime = out.timeCreated;
+							}
+							if (out.timeUpdated > lastUpdateTime) {
+								lastUpdateTime = out.timeUpdated;
+							}
+							schemasInsideDir.add(out.fileSchemaId);
+							totalSizeInBytes += out.sizeBytes;
+							totalFilesProcessedDirectlyInsideDir += 1;
 						}
-						if (out.timeUpdated > lastUpdateTime) {
-							lastUpdateTime = out.timeUpdated;
-						}
-						totalSizeInBytes += out.sizeBytes;
-						totalFilesProcessedDirectlyInsideDir += 1;
 					} catch (final Exception exc) {
 						log.warn("Exception while parsing file {}", fw.getFullPath(), exc);
 					}
@@ -133,10 +153,16 @@ public class FSDataSourceProcessor implements DataSourceProcessor {
 		res.timeCreated = oldestCreationTime;
 		res.timeUpdated = lastUpdateTime;
 		res.countProcessedFilesInsideDirectory = totalFilesProcessedDirectlyInsideDir;
-		res.countProcessedFilesUnderDirectory = totalFilesProcessedUnderDirectory + totalFilesProcessedDirectlyInsideDir;
+		res.countProcessedFilesUnderDirectory = totalFilesProcessedUnderDirectory
+				+ totalFilesProcessedDirectlyInsideDir;
+		res.countUnprocessedFilesInsideDirectory = totalFilesUnprocessedInsideDir;
+		res.countUnprocessedFilesUnderDirectory = totalFilesUnprocessedInsideDir + totalFilesUnprocessedUnderDirectory;
 		res.summedTotalSizeOfFilesBytesUnderDirectory = totalFilesSizeBytesUnderDir + totalSizeInBytes;
+		res.numberOfDifferentSchemasInsideDirectory = schemasInsideDir.size();
+		res.numberOfDifferentSchemasUnderDirectory = res.numberOfDifferentSchemasInsideDirectory + totalSchemasUnderDir;
 		log.debug("In total processed {} files in {}", totalFilesProcessedDirectlyInsideDir, dir.getFullPath());
-		if(res.countProcessedFilesInsideDirectory > 0){
+		final boolean shouldPersist = shouldPersistDirectory(res);
+		if (shouldPersist) {
 			final DirectoryInfo di = new DirectoryInfo();
 			di.setAbsolutePath(dir.getFullPath());
 			di.setCountProcessedFilesInsideDirectory(res.countProcessedFilesInsideDirectory);
@@ -144,10 +170,18 @@ public class FSDataSourceProcessor implements DataSourceProcessor {
 			di.setSizeBytes(res.sizeBytes);
 			di.setSummedTotalSizeOfFilesBytesUnderDirectory(res.summedTotalSizeOfFilesBytesUnderDirectory);
 			di.setTimeCreated(res.timeCreated);
+			di.setNumberOfDifferentSchemasInsideDirectory(res.numberOfDifferentSchemasInsideDirectory);
+			di.setNumberOfDifferentSchemasUnderDirectory(res.numberOfDifferentSchemasUnderDirectory);
+			di.setCountUnprocessedFilesInsideDirectory(res.countUnprocessedFilesInsideDirectory);
+			di.setCountProcessedFilesUnderDirectory(res.countUnprocessedFilesUnderDirectory);
 			storage.save(di);
 		}
 		saveLastModificationTime(dir, storage);
 		return res;
+	}
+	
+	private boolean shouldPersistDirectory(DirectoryProcessingOutput dpo){
+		return dpo.numberOfDifferentSchemasUnderDirectory > 0 || dpo.countUnprocessedFilesUnderDirectory > 0;
 	}
 
 	private void saveLastModificationTime(FileWrapper fw, Storage storage) throws IOException {
@@ -179,6 +213,8 @@ public class FSDataSourceProcessor implements DataSourceProcessor {
 			final boolean isParquetFile = isParquetFile(uri.toString());
 			if (isParquetFile) {
 				si = converter.parseParquetFile(uri);
+			} else {
+				return null;
 			}
 		} catch (final Exception exc) {
 			log.warn("Exception while parsing {} - details {}", fw.getFullPath(), exc.getMessage());
@@ -194,6 +230,7 @@ public class FSDataSourceProcessor implements DataSourceProcessor {
 			out.timeCreated = timeCreated;
 			out.timeUpdated = timeUpdated;
 			out.sizeBytes = fw.getFileSize();
+			out.fileSchemaId = fws.getSchemaId();
 			fws.setType(FileType.PARQUET);
 			fws.setAbsolutePath(fw.getFullPath());
 			fws.setSchemaId(si.getId());
@@ -204,15 +241,21 @@ public class FSDataSourceProcessor implements DataSourceProcessor {
 	}
 
 	class FileProcessingOutput {
+		String fileSchemaId;
 		long timeCreated;
 		long timeUpdated;
-		long sizeBytes; // size of file or (for dirs) size of all files inside dir
+		long sizeBytes; 
+		// size of file or (for dirs) size of all files inside dir
 	}
 
 	class DirectoryProcessingOutput extends FileProcessingOutput {
 		int countProcessedFilesInsideDirectory;
 		long summedTotalSizeOfFilesBytesUnderDirectory;
 		int countProcessedFilesUnderDirectory;
+		int countUnprocessedFilesInsideDirectory;
+		int countUnprocessedFilesUnderDirectory;
+		int numberOfDifferentSchemasInsideDirectory;
+		int numberOfDifferentSchemasUnderDirectory;
 	}
 
 	private static boolean isLocalFs(String uri) {
