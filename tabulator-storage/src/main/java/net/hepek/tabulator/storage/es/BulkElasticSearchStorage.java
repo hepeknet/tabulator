@@ -20,6 +20,7 @@ import org.elasticsearch.client.transport.TransportClient;
 
 import net.hepek.tabulator.api.pojo.DataSourceInfo;
 import net.hepek.tabulator.api.pojo.DirectoryInfo;
+import net.hepek.tabulator.api.pojo.DirectoryWithSchema;
 import net.hepek.tabulator.api.pojo.FileWithSchema;
 import net.hepek.tabulator.api.pojo.SchemaInfo;
 
@@ -56,6 +57,7 @@ public class BulkElasticSearchStorage extends ElasticSearchStorage {
 					int totalIMT = 0;
 					int totalDirInfo = 0;
 					int totalSchemasSkipped = 0;
+					int totalDirWithSchema = 0;
 					final Set<String> savedSchemaIdentifiers = new HashSet<>();
 					for (final PostponedWorkItem pwi : expired) {
 						final Object item = pwi.workItem;
@@ -92,14 +94,20 @@ public class BulkElasticSearchStorage extends ElasticSearchStorage {
 							bulkRequest.add(bulkClient.prepareIndex().setSource(json).setIndex(DIR_INFO_INDEX)
 									.setType(DIR_INFO_TYPE).setId(di.getAbsolutePath()));
 							totalDirInfo += 1;
+						} else if(item instanceof DirectoryWithSchema){
+							final DirectoryWithSchema dws = (DirectoryWithSchema) item;
+							
+							bulkRequest.add(bulkClient.prepareIndex().setSource(json).setIndex(DIR_WITH_SCHEMA_INDEX)
+									.setType(DIR_INFO_TYPE).setId(dws.getAbsolutePath()));
+							totalDirWithSchema += 1;
 						} else {
 							logger.warn("Unknown instance type {}", item);
 						}
 					}
 					final BulkResponse bulkResponse = bulkRequest.get();
 					logger.debug(
-							"Excuted bulk save with {} schemas, {} files, {} datasources, {} directories and {} IMT. Skipped saving of {} schemas",
-							totalSchemas, totalFiles, totalDataSources, totalDirInfo, totalIMT, totalSchemasSkipped);
+							"Excuted bulk save with {} schemas, {} files, {} datasources, {} directories, {} directories with schema and {} IMT. Skipped saving of {} schemas",
+							totalSchemas, totalFiles, totalDataSources, totalDirInfo, totalDirWithSchema, totalIMT, totalSchemasSkipped);
 					if (bulkResponse.hasFailures()) {
 						logger.warn("There are errors while bulk saving items. {}", bulkResponse.buildFailureMessage());
 					} else {
@@ -148,6 +156,11 @@ public class BulkElasticSearchStorage extends ElasticSearchStorage {
 	@Override
 	public void save(DirectoryInfo di) {
 		queue.add(new PostponedWorkItem(di, DEFAULT_DELAY_MILLIS));
+	}
+	
+	@Override
+	public void save(DirectoryWithSchema dws) {
+		queue.add(new PostponedWorkItem(dws, DEFAULT_DELAY_MILLIS));
 	}
 
 	@Override

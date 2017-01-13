@@ -5,13 +5,14 @@ public class DirectoryInfo {
 	private String absolutePath;
 	private long sizeBytes;
 	private long timeCreated;
-	private int countProcessedFilesInsideDirectory;
+	private int numberOfProcessedFilesInsideDirectory;
 	private long summedTotalSizeOfFilesBytesUnderDirectory;
-	private int countProcessedFilesUnderDirectory;
-	private int countUnprocessedFilesUnderDirectory;
-	private int countUnprocessedFilesInsideDirectory;
+	private int numberOfProcessedFilesUnderDirectory;
+	private int numberOfUnprocessedFilesUnderDirectory;
+	private int numberOfUnprocessedFilesInsideDirectory;
 	private int numberOfDifferentSchemasInsideDirectory;
 	private int numberOfDifferentSchemasUnderDirectory;
+	private long lastUpdateTime;
 
 	public String getAbsolutePath() {
 		return absolutePath;
@@ -37,12 +38,12 @@ public class DirectoryInfo {
 		this.timeCreated = timeCreated;
 	}
 
-	public int getCountProcessedFilesInsideDirectory() {
-		return countProcessedFilesInsideDirectory;
+	public int getNumberOfProcessedFilesInsideDirectory() {
+		return numberOfProcessedFilesInsideDirectory;
 	}
 
-	public void setCountProcessedFilesInsideDirectory(int countProcessedFilesInsideDirectory) {
-		this.countProcessedFilesInsideDirectory = countProcessedFilesInsideDirectory;
+	public void setNumberOfProcessedFilesInsideDirectory(int countProcessedFilesInsideDirectory) {
+		this.numberOfProcessedFilesInsideDirectory = countProcessedFilesInsideDirectory;
 	}
 
 	public long getSummedTotalSizeOfFilesBytesUnderDirectory() {
@@ -53,28 +54,28 @@ public class DirectoryInfo {
 		this.summedTotalSizeOfFilesBytesUnderDirectory = summedTotalSizeOfFilesBytesUnderDirectory;
 	}
 
-	public int getCountProcessedFilesUnderDirectory() {
-		return countProcessedFilesUnderDirectory;
+	public int getNumberOfProcessedFilesUnderDirectory() {
+		return numberOfProcessedFilesUnderDirectory;
 	}
 
-	public void setCountProcessedFilesUnderDirectory(int countProcessedFilesUnderDirectory) {
-		this.countProcessedFilesUnderDirectory = countProcessedFilesUnderDirectory;
+	public void setNumberOfProcessedFilesUnderDirectory(int countProcessedFilesUnderDirectory) {
+		this.numberOfProcessedFilesUnderDirectory = countProcessedFilesUnderDirectory;
 	}
 
-	public int getCountUnprocessedFilesUnderDirectory() {
-		return countUnprocessedFilesUnderDirectory;
+	public int getNumberOfUnprocessedFilesUnderDirectory() {
+		return numberOfUnprocessedFilesUnderDirectory;
 	}
 
-	public void setCountUnprocessedFilesUnderDirectory(int countUnprocessedFilesUnderDirectory) {
-		this.countUnprocessedFilesUnderDirectory = countUnprocessedFilesUnderDirectory;
+	public void setNumberOfUnprocessedFilesUnderDirectory(int countUnprocessedFilesUnderDirectory) {
+		this.numberOfUnprocessedFilesUnderDirectory = countUnprocessedFilesUnderDirectory;
 	}
 
-	public int getCountUnprocessedFilesInsideDirectory() {
-		return countUnprocessedFilesInsideDirectory;
+	public int getNumberOfUnprocessedFilesInsideDirectory() {
+		return numberOfUnprocessedFilesInsideDirectory;
 	}
 
-	public void setCountUnprocessedFilesInsideDirectory(int countUnprocessedFilesInsideDirectory) {
-		this.countUnprocessedFilesInsideDirectory = countUnprocessedFilesInsideDirectory;
+	public void setNumberOfUnprocessedFilesInsideDirectory(int countUnprocessedFilesInsideDirectory) {
+		this.numberOfUnprocessedFilesInsideDirectory = countUnprocessedFilesInsideDirectory;
 	}
 
 	public int getNumberOfDifferentSchemasInsideDirectory() {
@@ -91,6 +92,14 @@ public class DirectoryInfo {
 
 	public void setNumberOfDifferentSchemasUnderDirectory(int numberOfDifferentSchemasUnderDirectory) {
 		this.numberOfDifferentSchemasUnderDirectory = numberOfDifferentSchemasUnderDirectory;
+	}
+
+	public long getLastUpdateTime() {
+		return lastUpdateTime;
+	}
+
+	public void setLastUpdateTime(long lastUpdateTime) {
+		this.lastUpdateTime = lastUpdateTime;
 	}
 
 }

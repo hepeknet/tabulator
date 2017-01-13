@@ -19,6 +19,7 @@ import net.hepek.tabulator.api.ds.DataSourceProcessor;
 import net.hepek.tabulator.api.pojo.DataSourceInfo;
 import net.hepek.tabulator.api.pojo.DataSourceType;
 import net.hepek.tabulator.api.pojo.DirectoryInfo;
+import net.hepek.tabulator.api.pojo.DirectoryWithSchema;
 import net.hepek.tabulator.api.pojo.FileType;
 import net.hepek.tabulator.api.pojo.FileWithSchema;
 import net.hepek.tabulator.api.pojo.SchemaInfo;
@@ -162,25 +163,41 @@ public class FSDataSourceProcessor implements DataSourceProcessor {
 		res.schemasInsideDir.addAll(schemasInsideDir);
 		log.debug("In total processed {} files in {}", totalFilesProcessedDirectlyInsideDir, dir.getFullPath());
 		final boolean shouldPersist = shouldPersistDirectory(res);
+		DirectoryInfo di = null;
+		final boolean hasSingleSchema = res.schemasUnderDir.size() == 1;
+		if (hasSingleSchema) {
+			di = new DirectoryWithSchema();
+		} else {
+			di = new DirectoryInfo();
+		}
 		if (shouldPersist) {
-			final DirectoryInfo di = new DirectoryInfo();
 			di.setAbsolutePath(dir.getFullPath());
-			di.setCountProcessedFilesInsideDirectory(res.countProcessedFilesInsideDirectory);
-			di.setCountProcessedFilesUnderDirectory(res.countProcessedFilesUnderDirectory);
+			di.setNumberOfProcessedFilesInsideDirectory(res.countProcessedFilesInsideDirectory);
+			di.setNumberOfProcessedFilesUnderDirectory(res.countProcessedFilesUnderDirectory);
 			di.setSizeBytes(res.sizeBytes);
 			di.setSummedTotalSizeOfFilesBytesUnderDirectory(res.summedTotalSizeOfFilesBytesUnderDirectory);
 			di.setTimeCreated(res.timeCreated);
 			di.setNumberOfDifferentSchemasInsideDirectory(res.schemasInsideDir.size());
 			di.setNumberOfDifferentSchemasUnderDirectory(res.schemasUnderDir.size());
-			di.setCountUnprocessedFilesInsideDirectory(res.countUnprocessedFilesInsideDirectory);
-			di.setCountProcessedFilesUnderDirectory(res.countUnprocessedFilesUnderDirectory);
-			storage.save(di);
+			di.setNumberOfUnprocessedFilesInsideDirectory(res.countUnprocessedFilesInsideDirectory);
+			di.setNumberOfProcessedFilesUnderDirectory(res.countUnprocessedFilesUnderDirectory);
+			di.setLastUpdateTime(res.timeUpdated);
+			if (hasSingleSchema) {
+				final String absPath = dir.getFullPath();
+				final String schemaId = res.schemasUnderDir.iterator().next();
+				final DirectoryWithSchema dws = (DirectoryWithSchema) di;
+				dws.setSchemaId(schemaId);
+				log.debug("Persisting directory {} with single assigned schema {}", absPath, schemaId);
+				storage.save(dws);
+			} else {
+				storage.save(di);
+			}
 		}
 		saveLastModificationTime(dir, storage);
 		return res;
 	}
-	
-	private boolean shouldPersistDirectory(DirectoryProcessingOutput dpo){
+
+	private boolean shouldPersistDirectory(DirectoryProcessingOutput dpo) {
 		return dpo.schemasUnderDir.size() > 0 || dpo.countUnprocessedFilesUnderDirectory > 0;
 	}
 
@@ -244,7 +261,7 @@ public class FSDataSourceProcessor implements DataSourceProcessor {
 		String fileSchemaId;
 		long timeCreated;
 		long timeUpdated;
-		long sizeBytes; 
+		long sizeBytes;
 		// size of file or (for dirs) size of all files inside dir
 	}
 

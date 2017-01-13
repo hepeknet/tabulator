@@ -18,6 +18,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import net.hepek.tabulator.api.pojo.DataSourceInfo;
 import net.hepek.tabulator.api.pojo.DirectoryInfo;
+import net.hepek.tabulator.api.pojo.DirectoryWithSchema;
 import net.hepek.tabulator.api.pojo.FileWithSchema;
 import net.hepek.tabulator.api.pojo.SchemaInfo;
 import net.hepek.tabulator.api.storage.Storage;
@@ -31,7 +32,8 @@ public class ElasticSearchStorage implements Storage {
 	protected static final String SCHEMA_INDEX = "schema";
 	protected static final String DS_INDEX = "datasource";
 	protected static final String FILES_INDEX = "files";
-	protected static final String DIR_INFO_INDEX = "directories";
+	protected static final String DIR_INFO_INDEX = "directory";
+	protected static final String DIR_WITH_SCHEMA_INDEX = "directory_with_schema";
 	protected static final String DIR_INFO_TYPE = "default";
 
 	protected static final String INTERNAL_MODIFICATION_INDEX = "tab_internal_modifications";
@@ -174,6 +176,17 @@ public class ElasticSearchStorage implements Storage {
 					.setType(DIR_INFO_TYPE).setId(di.getAbsolutePath()).get();
 		} catch (final JsonProcessingException e) {
 			logger.warn("Was not able to save directory. The reason is ", e);
+		}
+	}
+
+	@Override
+	public void save(DirectoryWithSchema dws) {
+		try {
+			final byte[] json = mapper.writeValueAsBytes(dws);
+			final IndexResponse ir = client.prepareIndex().setSource(json).setIndex(DS_INDEX)
+					.setType(DIR_INFO_TYPE).setId(dws.getAbsolutePath()).get();
+		} catch (final JsonProcessingException e) {
+			logger.warn("Was not able to save directory with schema. The reason is ", e);
 		}
 	}
 

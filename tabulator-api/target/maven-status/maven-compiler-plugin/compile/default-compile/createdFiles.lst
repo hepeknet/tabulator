@@ -8,8 +8,8 @@ net/hepek/tabulator/api/pojo/DataSourceType.class
 net/hepek/tabulator/api/ds/DataSource.class
 net/hepek/tabulator/api/pojo/DirectoryInfo.class
 net/hepek/tabulator/api/pojo/ColumnInfo.class
-net/hepek/tabulator/api/pojo/GroupColumnInfo.class
 net/hepek/tabulator/api/pojo/FileWithSchema.class
+net/hepek/tabulator/api/pojo/GroupColumnInfo.class
 net/hepek/tabulator/api/pojo/SchemaInfo.class
 net/hepek/tabulator/api/pojo/DirectoryWithSchema.class
 net/hepek/tabulator/api/pojo/BooleanColumnInfo.class
