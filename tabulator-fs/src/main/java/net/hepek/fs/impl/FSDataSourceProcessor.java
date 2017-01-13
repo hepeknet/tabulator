@@ -112,7 +112,7 @@ public class FSDataSourceProcessor implements DataSourceProcessor {
 		long totalFilesSizeBytesUnderDir = 0;
 		final FileWrapper[] children = dir.listChildren();
 		final Set<String> schemasInsideDir = new HashSet<>();
-		int totalSchemasUnderDir = 0;
+		final Set<String> schemasUnderDir = new HashSet<>();
 		if (children != null && children.length > 0) {
 			for (final FileWrapper fw : children) {
 				if (fw.isDirectory()) {
@@ -126,7 +126,7 @@ public class FSDataSourceProcessor implements DataSourceProcessor {
 					totalFilesSizeBytesUnderDir += dirOut.sizeBytes;
 					totalFilesProcessedUnderDirectory += dirOut.countProcessedFilesInsideDirectory;
 					totalFilesUnprocessedUnderDirectory += dirOut.countUnprocessedFilesInsideDirectory;
-					totalSchemasUnderDir += dirOut.numberOfDifferentSchemasInsideDirectory;
+					schemasUnderDir.addAll(dirOut.schemasUnderDir);
 				} else {
 					try {
 						final FileProcessingOutput out = processFile(converter, fw, storage, dsi);
@@ -158,8 +158,8 @@ public class FSDataSourceProcessor implements DataSourceProcessor {
 		res.countUnprocessedFilesInsideDirectory = totalFilesUnprocessedInsideDir;
 		res.countUnprocessedFilesUnderDirectory = totalFilesUnprocessedInsideDir + totalFilesUnprocessedUnderDirectory;
 		res.summedTotalSizeOfFilesBytesUnderDirectory = totalFilesSizeBytesUnderDir + totalSizeInBytes;
-		res.numberOfDifferentSchemasInsideDirectory = schemasInsideDir.size();
-		res.numberOfDifferentSchemasUnderDirectory = res.numberOfDifferentSchemasInsideDirectory + totalSchemasUnderDir;
+		res.schemasUnderDir.addAll(schemasUnderDir);
+		res.schemasInsideDir.addAll(schemasInsideDir);
 		log.debug("In total processed {} files in {}", totalFilesProcessedDirectlyInsideDir, dir.getFullPath());
 		final boolean shouldPersist = shouldPersistDirectory(res);
 		if (shouldPersist) {
@@ -170,8 +170,8 @@ public class FSDataSourceProcessor implements DataSourceProcessor {
 			di.setSizeBytes(res.sizeBytes);
 			di.setSummedTotalSizeOfFilesBytesUnderDirectory(res.summedTotalSizeOfFilesBytesUnderDirectory);
 			di.setTimeCreated(res.timeCreated);
-			di.setNumberOfDifferentSchemasInsideDirectory(res.numberOfDifferentSchemasInsideDirectory);
-			di.setNumberOfDifferentSchemasUnderDirectory(res.numberOfDifferentSchemasUnderDirectory);
+			di.setNumberOfDifferentSchemasInsideDirectory(res.schemasInsideDir.size());
+			di.setNumberOfDifferentSchemasUnderDirectory(res.schemasUnderDir.size());
 			di.setCountUnprocessedFilesInsideDirectory(res.countUnprocessedFilesInsideDirectory);
 			di.setCountProcessedFilesUnderDirectory(res.countUnprocessedFilesUnderDirectory);
 			storage.save(di);
@@ -181,7 +181,7 @@ public class FSDataSourceProcessor implements DataSourceProcessor {
 	}
 	
 	private boolean shouldPersistDirectory(DirectoryProcessingOutput dpo){
-		return dpo.numberOfDifferentSchemasUnderDirectory > 0 || dpo.countUnprocessedFilesUnderDirectory > 0;
+		return dpo.schemasUnderDir.size() > 0 || dpo.countUnprocessedFilesUnderDirectory > 0;
 	}
 
 	private void saveLastModificationTime(FileWrapper fw, Storage storage) throws IOException {
@@ -254,8 +254,8 @@ public class FSDataSourceProcessor implements DataSourceProcessor {
 		int countProcessedFilesUnderDirectory;
 		int countUnprocessedFilesInsideDirectory;
 		int countUnprocessedFilesUnderDirectory;
-		int numberOfDifferentSchemasInsideDirectory;
-		int numberOfDifferentSchemasUnderDirectory;
+		Set<String> schemasUnderDir = new HashSet<>();
+		Set<String> schemasInsideDir = new HashSet<>();
 	}
 
 	private static boolean isLocalFs(String uri) {
