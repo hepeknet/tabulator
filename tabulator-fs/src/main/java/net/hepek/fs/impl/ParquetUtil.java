@@ -10,4 +10,8 @@ public abstract class ParquetUtil {
 		return Util.getInternalConfig().getStringList("tabulator.parquet.file-extensions");
 	}
 	
+	public static boolean isHiddenFile(String uri){
+		return uri.startsWith(".") || uri.startsWith("_");
+	}
+	
 }

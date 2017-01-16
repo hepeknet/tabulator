@@ -11,6 +11,7 @@ import java.util.List;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.PathFilter;
 
 public class FileWrapper {
 	
@@ -113,7 +114,14 @@ public class FileWrapper {
 			stream.close();
 			return (FileWrapper[]) fwList.toArray();
 		} else if(hdfsFile != null){
-			final FileStatus[] listStatus = hdfs.listStatus(hdfsFile.getPath());
+			final FileStatus[] listStatus = hdfs.listStatus(hdfsFile.getPath(), new PathFilter() {
+				
+				@Override
+				public boolean accept(org.apache.hadoop.fs.Path path) {
+					final String name = path.getName();
+					return !ParquetUtil.isHiddenFile(name);
+				}
+			});
 			final FileWrapper[] fwList = new FileWrapper[listStatus.length];
 			for(int i=0;i<listStatus.length;i++){
 				final FileStatus fs = listStatus[i];

@@ -112,7 +112,6 @@ public class FSDataSourceProcessor implements DataSourceProcessor {
 		int totalFilesUnprocessedUnderDirectory = 0;
 		long totalFilesSizeBytesUnderDir = 0;
 		final FileWrapper[] children = dir.listChildren();
-		final Set<String> schemasInsideDir = new HashSet<>();
 		final Set<String> schemasUnderDir = new HashSet<>();
 		if (children != null && children.length > 0) {
 			for (final FileWrapper fw : children) {
@@ -127,7 +126,7 @@ public class FSDataSourceProcessor implements DataSourceProcessor {
 					totalFilesSizeBytesUnderDir += dirOut.sizeBytes;
 					totalFilesProcessedUnderDirectory += dirOut.countProcessedFilesInsideDirectory;
 					totalFilesUnprocessedUnderDirectory += dirOut.countUnprocessedFilesInsideDirectory;
-					schemasUnderDir.addAll(dirOut.schemasUnderDir);
+					schemasUnderDir.addAll(dirOut.schemaIdsForFilesAndSubDirs);
 				} else {
 					try {
 						final FileProcessingOutput out = processFile(converter, fw, storage, dsi);
@@ -140,7 +139,7 @@ public class FSDataSourceProcessor implements DataSourceProcessor {
 							if (out.timeUpdated > lastUpdateTime) {
 								lastUpdateTime = out.timeUpdated;
 							}
-							schemasInsideDir.add(out.fileSchemaId);
+							schemasUnderDir.add(out.fileSchemaId);
 							totalSizeInBytes += out.sizeBytes;
 							totalFilesProcessedDirectlyInsideDir += 1;
 						}
@@ -159,32 +158,30 @@ public class FSDataSourceProcessor implements DataSourceProcessor {
 		res.countUnprocessedFilesInsideDirectory = totalFilesUnprocessedInsideDir;
 		res.countUnprocessedFilesUnderDirectory = totalFilesUnprocessedInsideDir + totalFilesUnprocessedUnderDirectory;
 		res.summedTotalSizeOfFilesBytesUnderDirectory = totalFilesSizeBytesUnderDir + totalSizeInBytes;
-		res.schemasUnderDir.addAll(schemasUnderDir);
-		res.schemasInsideDir.addAll(schemasInsideDir);
+		res.schemaIdsForFilesAndSubDirs.addAll(schemasUnderDir);
 		log.debug("In total processed {} files in {}", totalFilesProcessedDirectlyInsideDir, dir.getFullPath());
 		final boolean shouldPersist = shouldPersistDirectory(res);
 		DirectoryInfo di = null;
-		final boolean hasSingleSchema = res.schemasUnderDir.size() == 1;
+		final boolean hasSingleSchema = res.schemaIdsForFilesAndSubDirs.size() == 1;
 		if (hasSingleSchema) {
 			di = new DirectoryWithSchema();
 		} else {
 			di = new DirectoryInfo();
 		}
 		if (shouldPersist) {
-			di.setAbsolutePath(dir.getFullPath());
+			final String absPath = dir.getFullPath();
+			di.setAbsolutePath(absPath);
 			di.setNumberOfProcessedFilesInsideDirectory(res.countProcessedFilesInsideDirectory);
 			di.setNumberOfProcessedFilesUnderDirectory(res.countProcessedFilesUnderDirectory);
 			di.setSizeBytes(res.sizeBytes);
 			di.setSummedTotalSizeOfFilesBytesUnderDirectory(res.summedTotalSizeOfFilesBytesUnderDirectory);
 			di.setTimeCreated(res.timeCreated);
-			di.setNumberOfDifferentSchemasInsideDirectory(res.schemasInsideDir.size());
-			di.setNumberOfDifferentSchemasUnderDirectory(res.schemasUnderDir.size());
+			di.setNumberOfDifferentSchemasInsideDirectory(res.schemaIdsForFilesAndSubDirs.size());
 			di.setNumberOfUnprocessedFilesInsideDirectory(res.countUnprocessedFilesInsideDirectory);
 			di.setNumberOfProcessedFilesUnderDirectory(res.countUnprocessedFilesUnderDirectory);
 			di.setLastUpdateTime(res.timeUpdated);
 			if (hasSingleSchema) {
-				final String absPath = dir.getFullPath();
-				final String schemaId = res.schemasUnderDir.iterator().next();
+				final String schemaId = res.schemaIdsForFilesAndSubDirs.iterator().next();
 				final DirectoryWithSchema dws = (DirectoryWithSchema) di;
 				dws.setSchemaId(schemaId);
 				log.debug("Persisting directory {} with single assigned schema {}", absPath, schemaId);
@@ -198,7 +195,7 @@ public class FSDataSourceProcessor implements DataSourceProcessor {
 	}
 
 	private boolean shouldPersistDirectory(DirectoryProcessingOutput dpo) {
-		return dpo.schemasUnderDir.size() > 0 || dpo.countUnprocessedFilesUnderDirectory > 0;
+		return dpo.schemaIdsForFilesAndSubDirs.size() > 0 || dpo.countUnprocessedFilesUnderDirectory > 0;
 	}
 
 	private void saveLastModificationTime(FileWrapper fw, Storage storage) throws IOException {
@@ -257,7 +254,7 @@ public class FSDataSourceProcessor implements DataSourceProcessor {
 		return out;
 	}
 
-	class FileProcessingOutput {
+	private static class FileProcessingOutput {
 		String fileSchemaId;
 		long timeCreated;
 		long timeUpdated;
@@ -265,14 +262,13 @@ public class FSDataSourceProcessor implements DataSourceProcessor {
 		// size of file or (for dirs) size of all files inside dir
 	}
 
-	class DirectoryProcessingOutput extends FileProcessingOutput {
+	private static class DirectoryProcessingOutput extends FileProcessingOutput {
 		int countProcessedFilesInsideDirectory;
 		long summedTotalSizeOfFilesBytesUnderDirectory;
 		int countProcessedFilesUnderDirectory;
 		int countUnprocessedFilesInsideDirectory;
 		int countUnprocessedFilesUnderDirectory;
-		Set<String> schemasUnderDir = new HashSet<>();
-		Set<String> schemasInsideDir = new HashSet<>();
+		Set<String> schemaIdsForFilesAndSubDirs = new HashSet<>();
 	}
 
 	private static boolean isLocalFs(String uri) {
@@ -280,7 +276,7 @@ public class FSDataSourceProcessor implements DataSourceProcessor {
 	}
 
 	private static boolean isParquetFile(String uri) {
-		if (uri.startsWith(".")) {
+		if (ParquetUtil.isHiddenFile(uri)) {
 			return false;
 		}
 		return uri.endsWith(".parquet") || uri.endsWith(".pqt") || uri.endsWith(".pq");

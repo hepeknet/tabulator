@@ -201,7 +201,7 @@ public class BulkElasticSearchStorage extends ElasticSearchStorage {
 					throw new IllegalStateException("Did not get ACK for deleting caches...");
 				}
 			} else {
-				logger.debug("Index {} does not exist - nothing to delete here...");
+				logger.debug("Index {} does not exist - nothing to delete here...", INTERNAL_MODIFICATION_INDEX);
 			}
 		} catch (final Exception exc) {
 			logger.warn("Exception while deleting index: {}", exc.getMessage());

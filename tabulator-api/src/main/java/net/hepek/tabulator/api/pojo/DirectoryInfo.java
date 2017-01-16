@@ -11,7 +11,6 @@ public class DirectoryInfo {
 	private int numberOfUnprocessedFilesUnderDirectory;
 	private int numberOfUnprocessedFilesInsideDirectory;
 	private int numberOfDifferentSchemasInsideDirectory;
-	private int numberOfDifferentSchemasUnderDirectory;
 	private long lastUpdateTime;
 
 	public String getAbsolutePath() {
@@ -84,14 +83,6 @@ public class DirectoryInfo {
 
 	public void setNumberOfDifferentSchemasInsideDirectory(int numberOfDifferentSchemasInsideDirectory) {
 		this.numberOfDifferentSchemasInsideDirectory = numberOfDifferentSchemasInsideDirectory;
-	}
-
-	public int getNumberOfDifferentSchemasUnderDirectory() {
-		return numberOfDifferentSchemasUnderDirectory;
-	}
-
-	public void setNumberOfDifferentSchemasUnderDirectory(int numberOfDifferentSchemasUnderDirectory) {
-		this.numberOfDifferentSchemasUnderDirectory = numberOfDifferentSchemasUnderDirectory;
 	}
 
 	public long getLastUpdateTime() {
